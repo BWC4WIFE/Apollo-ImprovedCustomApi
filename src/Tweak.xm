@@ -742,10 +742,22 @@ static NSURLRequest *ApolloLocalFastFailRequest(NSString *path) {
             [self setValue:mutableRequest forKey:@"_originalRequest"];
             [self setValue:mutableRequest forKey:@"_currentRequest"];
         }
-    } else if ([requestURL.host isEqualToString:@"oauth.reddit.com"] || [requestURL.host isEqualToString:@"www.reddit.com"]) {
+} else if ([requestURL.host isEqualToString:@"oauth.reddit.com"] || [requestURL.host isEqualToString:@"www.reddit.com"]) {
         NSMutableURLRequest *mutableRequest = [request mutableCopy];
         NSString *customUA = [sUserAgent length] > 0 ? sUserAgent : defaultUserAgent;
         [mutableRequest setValue:customUA forHTTPHeaderField:@"User-Agent"];
+        
+        // Inject the Client Secret for the OAuth token exchange
+        if ([requestURL.path isEqualToString:@"/api/v1/access_token"]) {
+            if ([sRedditClientId length] > 0 && [sRedditClientSecret length] > 0) {
+                NSString *authString = [NSString stringWithFormat:@"%@:%@", sRedditClientId, sRedditClientSecret];
+                NSData *authData = [authString dataUsingEncoding:NSUTF8StringEncoding];
+                NSString *base64Auth = [authData base64EncodedStringWithOptions:0];
+                NSString *authHeaderValue = [NSString stringWithFormat:@"Basic %@", base64Auth];
+                [mutableRequest setValue:authHeaderValue forHTTPHeaderField:@"Authorization"];
+            }
+        }
+        
         [self setValue:mutableRequest forKey:@"_originalRequest"];
         [self setValue:mutableRequest forKey:@"_currentRequest"];
     } else if (sProxyImgurDDG
